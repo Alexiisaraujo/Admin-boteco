@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin – Boteco Municipal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=EB+Garamond:ital,wght@0,400;1,400&family=Oswald:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --dark: #1a1208;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --brown: #2d1f10;
+    --green: #2d4a2d;
+    --red: #8b1a1a;
+    --border: #c9a84c44;
+    --panel: #221a0e;
+  }
+  * { margin:0;padding:0;box-sizing:border-box; }
+  body { background:var(--dark); color:var(--cream); font-family:'EB Garamond',serif; min-height:100vh; }
+
+  /* LOADING */
+  #init-loading {
+    position:fixed; inset:0; background:var(--dark);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:9999; transition:opacity 0.4s;
+  }
+  #init-loading.hidden { opacity:0; pointer-events:none; }
+  .loading-spinner { width:36px;height:36px;border:2px solid #c9a84c33;border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:14px; }
+  @keyframes spin { to{transform:rotate(360deg);} }
+  .loading-text { font-family:'Oswald',sans-serif;font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);opacity:0.6; }
+
+  /* LOGIN */
+  .login-screen { min-height:100svh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 50%,#3d2b1f55 0%,var(--dark) 70%);padding:20px; }
+  .login-box { background:var(--brown);border:1px solid var(--border);border-radius:6px;padding:40px 28px;width:100%;max-width:360px;text-align:center; }
+  .login-logo { width:100px;height:100px;object-fit:contain;margin-bottom:20px;filter:drop-shadow(0 0 12px #c9a84c44); }
+  .login-title { font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);margin-bottom:4px; }
+  .login-sub { font-family:'Oswald',sans-serif;font-size:0.65rem;letter-spacing:0.25em;text-transform:uppercase;opacity:0.45;margin-bottom:28px; }
+  .login-input { width:100%;padding:14px 16px;background:var(--dark);border:1px solid var(--border);border-radius:3px;color:var(--cream);font-family:'EB Garamond',serif;font-size:1rem;text-align:center;letter-spacing:0.25em;outline:none;margin-bottom:10px; }
+  .login-input:focus { border-color:var(--gold); }
+  .login-btn { width:100%;padding:14px;background:var(--gold);color:var(--dark);border:none;border-radius:3px;font-family:'Oswald',sans-serif;font-size:0.8rem;letter-spacing:0.25em;text-transform:uppercase;font-weight:600;cursor:pointer;transition:background 0.2s;margin-top:4px; }
+  .login-btn:hover { background:var(--gold-light); }
+  .login-error { color:#e07070;font-family:'Oswald',sans-serif;font-size:0.72rem;letter-spacing:0.1em;margin-top:8px;display:none; }
+
+  /* ADMIN APP */
+  .admin-app { display:none; }
+
+  /* TOPBAR */
+  .topbar { background:var(--panel);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50; }
+  .topbar-title { font-family:'Playfair Display',serif;font-size:1rem;color:var(--gold);display:flex;align-items:center;gap:10px; }
+  .topbar-actions { display:flex;gap:8px;align-items:center; }
+
+  /* SAVE STATUS */
+  .save-status {
+    font-family:'Oswald',sans-serif;font-size:0.6rem;letter-spacing:0.15em;
+    text-transform:uppercase;padding:5px 10px;border-radius:2px;
+    transition:all 0.3s;
+  }
+  .save-status.saving { color:var(--gold);opacity:0.7; }
+  .save-status.saved { color:#7ab87a; }
+  .save-status.error { color:#e07070; }
+
+  /* BUTTONS */
+  .btn-sm { padding:8px 14px;font-family:'Oswald',sans-serif;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;border-radius:3px;cursor:pointer;border:none;transition:all 0.2s; }
+  .btn-gold { background:var(--gold);color:var(--dark);font-weight:600; }
+  .btn-gold:hover { background:var(--gold-light); }
+  .btn-outline { background:transparent;color:var(--cream);border:1px solid #ffffff33;opacity:0.7; }
+  .btn-outline:hover { opacity:1;border-color:#c9a84c66; }
+  .btn-red { background:var(--red);color:var(--cream); }
+  .btn-red:hover { background:#b02020; }
+
+  /* TABS */
+  .admin-tabs { background:var(--panel);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none; }
+  .admin-tabs::-webkit-scrollbar { display:none; }
+  .tab-btn { flex-shrink:0;padding:12px 18px;font-family:'Oswald',sans-serif;font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;background:none;border:none;color:var(--cream);opacity:0.5;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap; }
+  .tab-btn.active { opacity:1;color:var(--gold);border-bottom-color:var(--gold); }
+
+  /* CONTENT */
+  .admin-content { padding:20px;max-width:700px;margin:0 auto; }
+  .section-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:16px; }
+  .section-header h3 { font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold); }
+
+  /* ITEM ROWS */
+  .item-row { background:#ffffff08;border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:8px;display:grid;gap:8px; }
+  .item-row-header { display:flex;justify-content:space-between;align-items:center;gap:10px; }
+  .item-name { font-family:'Playfair Display',serif;font-size:0.9rem;color:var(--cream);flex:1; }
+  .item-price-tag { font-family:'Oswald',sans-serif;font-size:0.85rem;font-weight:600;color:var(--gold);white-space:nowrap; }
+  .item-actions { display:flex;gap:6px; }
+  .btn-icon { width:30px;height:30px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--cream);opacity:0.6;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;font-size:0.75rem; }
+  .btn-icon:hover { opacity:1;border-color:var(--gold);color:var(--gold); }
+  .btn-icon.del:hover { border-color:#e07070;color:#e07070; }
+
+  /* FORM */
+  .form-panel { background:var(--brown);border:1px solid #c9a84c44;border-radius:6px;padding:20px;margin-bottom:20px;display:none; }
+  .form-panel.open { display:block; }
+  .form-panel h4 { font-family:'Playfair Display',serif;font-size:1rem;color:var(--gold);margin-bottom:16px; }
+  .form-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px; }
+  .form-group { display:flex;flex-direction:column;gap:5px; }
+  .form-group.full { grid-column:1/-1; }
+  .form-label { font-family:'Oswald',sans-serif;font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--cream);opacity:0.5; }
+  .form-input,.form-select,.form-textarea { padding:10px 12px;background:var(--dark);border:1px solid var(--border);border-radius:3px;color:var(--cream);font-family:'EB Garamond',serif;font-size:0.9rem;outline:none;width:100%; }
+  .form-input:focus,.form-select:focus,.form-textarea:focus { border-color:var(--gold); }
+  .form-textarea { resize:vertical;min-height:80px; }
+  .form-select option { background:var(--dark); }
+  .form-actions { display:flex;gap:8px;justify-content:flex-end; }
+
+  /* CHOPP */
+  .chopp-admin-row { background:#ffffff08;border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:8px; }
+  .chopp-admin-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:10px; }
+  .chopp-admin-num { font-family:'Oswald',sans-serif;font-size:0.75rem;color:var(--gold);opacity:0.7;letter-spacing:0.1em; }
+  .chopp-inline-grid { display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:6px;align-items:center; }
+  .ci-input { padding:8px 10px;background:var(--dark);border:1px solid var(--border);border-radius:3px;color:var(--cream);font-family:'EB Garamond',serif;font-size:0.85rem;outline:none;width:100%; }
+  .ci-input:focus { border-color:var(--gold); }
+  .ci-label { font-family:'Oswald',sans-serif;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--cream);opacity:0.4;margin-bottom:3px; }
+  .toggle-wrap { display:flex;align-items:center;gap:8px; }
+  .toggle { width:40px;height:22px;background:#333;border-radius:11px;position:relative;cursor:pointer;transition:background 0.2s;border:none;flex-shrink:0; }
+  .toggle::after { content:'';position:absolute;width:16px;height:16px;background:white;border-radius:50%;top:3px;left:3px;transition:transform 0.2s; }
+  .toggle.on { background:var(--green); }
+  .toggle.on::after { transform:translateX(18px); }
+  .toggle-label { font-family:'Oswald',sans-serif;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;opacity:0.6; }
+
+  /* TOAST */
+  .toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--gold);color:var(--dark);font-family:'Oswald',sans-serif;font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;padding:12px 24px;border-radius:3px;transition:transform 0.3s ease;z-index:999;white-space:nowrap; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* EDIT MODAL */
+  .edit-modal { display:none;position:fixed;inset:0;z-index:200;background:#000000cc;backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px; }
+  .edit-modal.open { display:flex; }
+  .edit-modal-box { background:var(--brown);border:1px solid #c9a84c66;border-radius:6px;padding:24px 20px;width:100%;max-width:440px;max-height:90svh;overflow-y:auto; }
+  .edit-modal-box h4 { font-family:'Playfair Display',serif;font-size:1rem;color:var(--gold);margin-bottom:16px; }
+  .modal-form-actions { display:flex;gap:8px;margin-top:16px;justify-content:flex-end; }
+
+  .preview-link { font-family:'Oswald',sans-serif;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--cream);opacity:0.5;text-decoration:none;transition:opacity 0.2s; }
+  .preview-link:hover { opacity:1;color:var(--gold); }
+
+  /* INFO BOX */
+  .info-box { background:#c9a84c11;border:1px solid #c9a84c33;border-radius:4px;padding:12px 16px;margin-bottom:20px;font-family:'Oswald',sans-serif;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);opacity:0.8;display:flex;align-items:center;gap:8px; }
+</style>
+</head>
+<body>
+
+<!-- INIT LOADING -->
+<div id="init-loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Conectando ao Firebase…</div>
+</div>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <img class="login-logo" src="boteco.jpg" alt="Boteco" onerror="this.style.display='none'">
+    <div class="login-title">Painel Admin</div>
+    <div class="login-sub">Boteco Municipal</div>
+    <input type="password" class="login-input" id="adminPass" placeholder="••••••••">
+    <div class="login-error" id="loginErr">Senha incorreta</div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div style="margin-top:20px">
+      <a href="index.html" class="preview-link">← Voltar ao Cardápio</a>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div class="admin-app" id="adminApp">
+
+  <div class="topbar">
+    <div class="topbar-title">
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="color:var(--gold)"><path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+      Admin · Boteco Municipal
+    </div>
+    <div class="topbar-actions">
+      <span class="save-status" id="saveStatus"></span>
+      <a href="index.html" class="preview-link" target="_blank">Ver cardápio ↗</a>
+      <button class="btn-sm btn-outline" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <!-- TABS: Almoço primeiro -->
+  <div class="admin-tabs">
+    <button class="tab-btn active" onclick="switchTab('almoco')">🍽️ Almoço</button>
+    <button class="tab-btn" onclick="switchTab('chopp')">🍺 Chopp</button>
+    <button class="tab-btn" onclick="switchTab('cervejas')">🍻 Cervejas</button>
+    <button class="tab-btn" onclick="switchTab('drinks')">🍹 Drinks</button>
+    <button class="tab-btn" onclick="switchTab('sanduiches')">🥪 Lanches</button>
+    <button class="tab-btn" onclick="switchTab('porcoes')">🧆 Porções</button>
+    <button class="tab-btn" onclick="switchTab('bebidas')">🥤 Bebidas</button>
+  </div>
+
+  <div class="admin-content">
+
+    <!-- ALMOÇO TAB -->
+    <div id="tab-almoco">
+      <div class="section-header" style="margin-top:8px">
+        <h3>Almoço do Dia</h3>
+        <button class="btn-sm btn-gold" onclick="openAddForm('almoco')">+ Adicionar</button>
+      </div>
+      <div class="info-box">
+        ☁️ Alterações salvam automaticamente no Firebase — o cardápio atualiza em tempo real
+      </div>
+      <div class="form-panel" id="form-almoco">
+        <h4>Novo Prato</h4>
+        <div class="form-grid">
+          <div class="form-group full"><div class="form-label">Nome</div><input class="form-input" id="f-almoco-name" placeholder="Ex: Picanha"></div>
+          <div class="form-group"><div class="form-label">Peso aprox.</div><input class="form-input" id="f-almoco-weight" placeholder="~200g"></div>
+          <div class="form-group"><div class="form-label">Preço</div><input class="form-input" id="f-almoco-price" placeholder="0,00"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-sm btn-outline" onclick="closeForm('almoco')">Cancelar</button>
+          <button class="btn-sm btn-gold" onclick="addItem('almoco')">Adicionar</button>
+        </div>
+      </div>
+      <div id="list-almoco"></div>
+    </div>
+
+    <!-- CHOPP TAB -->
+    <div id="tab-chopp" style="display:none">
+      <div class="section-header" style="margin-top:8px">
+        <h3>Torneiras de Chopp</h3>
+        <button class="btn-sm btn-gold" onclick="saveChopp()">💾 Salvar Chopp</button>
+      </div>
+      <p style="font-family:Oswald,sans-serif;font-size:0.65rem;letter-spacing:0.1em;opacity:0.45;margin-bottom:16px;text-transform:uppercase">Edite cada torneira · H = Meia Pinta · P = Pinta · Salve ao terminar</p>
+      <div id="chopp-admin-list"></div>
+    </div>
+
+    <!-- CERVEJAS TAB -->
+    <div id="tab-cervejas" style="display:none">
+      <div class="section-header" style="margin-top:8px">
+        <h3>Cervejas</h3>
+        <button class="btn-sm btn-gold" onclick="openAddForm('cervejas')">+ Adicionar</button>
+      </div>
+      <div class="form-panel" id="form-cervejas">
+        <h4>Nova Cerveja</h4>
+        <div class="form-grid">
+          <div class="form-group full"><div class="form-label">Nome</div><input class="form-input" id="f-cervejas-name" placeholder="Ex: Heineken 600ml"></div>
+          <div class="form-group full"><div class="form-label">Preço (ex: 20,00)</div><input class="form-input" id="f-cervejas-price" placeholder="0,00"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-sm btn-outline" onclick="closeForm('cervejas')">Cancelar</button>
+          <button class="btn-sm btn-gold" onclick="addItem('cervejas')">Adicionar</button>
+        </div>
+      </div>
+      <div id="list-cervejas"></div>
+    </div>
+
+    <!-- DRINKS TAB -->
+    <div id="tab-drinks" style="display:none">
+      <div class="section-header" style="margin-top:8px">
+        <h3>Drinks &amp; Doses</h3>
+        <button class="btn-sm btn-gold" onclick="openAddForm('drinks')">+ Adicionar</button>
+      </div>
+      <div class="form-panel" id="form-drinks">
+        <h4>Novo Item</h4>
+        <div class="form-grid">
+          <div class="form-group full"><div class="form-label">Nome</div><input class="form-input" id="f-drinks-name" placeholder="Ex: Gin Tônica"></div>
+          <div class="form-group"><div class="form-label">Preço</div><input class="form-input" id="f-drinks-price" placeholder="0,00"></div>
+          <div class="form-group"><div class="form-label">Categoria</div>
+            <select class="form-select" id="f-drinks-category">
+              <option value="dose">Dose</option>
+              <option value="drink">Drink / Caipirinha</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-sm btn-outline" onclick="closeForm('drinks')">Cancelar</button>
+          <button class="btn-sm btn-gold" onclick="addItem('drinks')">Adicionar</button>
+        </div>
+      </div>
+      <div id="list-drinks"></div>
+    </div>
+
+    <!-- SANDUÍCHES TAB -->
+    <div id="tab-sanduiches" style="display:none">
+      <div class="section-header" style="margin-top:8px">
+        <h3>Sanduíches</h3>
+        <button class="btn-sm btn-gold" onclick="openAddForm('sanduiches')">+ Adicionar</button>
+      </div>
+      <div class="form-panel" id="form-sanduiches">
+        <h4>Novo Sanduíche</h4>
+        <div class="form-grid">
+          <div class="form-group full"><div class="form-label">Nome</div><input class="form-input" id="f-sanduiches-name" placeholder="Ex: Pork"></div>
+          <div class="form-group full"><div class="form-label">Preço</div><input class="form-input" id="f-sanduiches-price" placeholder="0,00"></div>
+          <div class="form-group full"><div class="form-label">Descrição</div><textarea class="form-textarea" id="f-sanduiches-desc" placeholder="Descreva os ingredientes..."></textarea></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-sm btn-outline" onclick="closeForm('sanduiches')">Cancelar</button>
+          <button class="btn-sm btn-gold" onclick="addItem('sanduiches')">Adicionar</button>
+        </div>
+      </div>
+      <div id="list-sanduiches"></div>
+    </div>
+
+    <!-- PORÇÕES TAB -->
+    <div id="tab-porcoes" style="display:none">
+      <div class="section-header" style="margin-top:8px">
+        <h3>Porções</h3>
+        <button class="btn-sm btn-gold" onclick="openAddForm('porcoes')">+ Adicionar</button>
+      </div>
+      <div class="form-panel" id="form-porcoes">
+        <h4>Nova Porção</h4>
+        <div class="form-grid">
+          <div class="form-group full"><div class="form-label">Nome</div><input class="form-input" id="f-porcoes-name" placeholder="Ex: Batata Frita"></div>
+          <div class="form-group"><div class="form-label">Quantidade/Peso</div><input class="form-input" id="f-porcoes-weight" placeholder="400g / 6 un"></div>
+          <div class="form-group"><div class="form-label">Preço</div><input class="form-input" id="f-porcoes-price" placeholder="0,00"></div>
+          <div class="form-group full"><div class="form-label">Descrição</div><textarea class="form-textarea" id="f-porcoes-desc" placeholder="Descreva o item..."></textarea></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-sm btn-outline" onclick="closeForm('porcoes')">Cancelar</button>
+          <button class="btn-sm btn-gold" onclick="addItem('porcoes')">Adicionar</button>
+        </div>
+      </div>
+      <div id="list-porcoes"></div>
+    </div>
+
+    <!-- BEBIDAS TAB -->
+    <div id="tab-bebidas" style="display:none">
+      <div class="section-header" style="margin-top:8px">
+        <h3>Bebidas</h3>
+        <button class="btn-sm btn-gold" onclick="openAddForm('bebidas')">+ Adicionar</button>
+      </div>
+      <div class="form-panel" id="form-bebidas">
+        <h4>Nova Bebida</h4>
+        <div class="form-grid">
+          <div class="form-group full"><div class="form-label">Nome</div><input class="form-input" id="f-bebidas-name" placeholder="Ex: Suco de Laranja"></div>
+          <div class="form-group full"><div class="form-label">Preço</div><input class="form-input" id="f-bebidas-price" placeholder="0,00"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-sm btn-outline" onclick="closeForm('bebidas')">Cancelar</button>
+          <button class="btn-sm btn-gold" onclick="addItem('bebidas')">Adicionar</button>
+        </div>
+      </div>
+      <div id="list-bebidas"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="edit-modal" id="editModal">
+  <div class="edit-modal-box">
+    <h4 id="editModalTitle">Editar Item</h4>
+    <div id="editModalBody"></div>
+    <div class="modal-form-actions">
+      <button class="btn-sm btn-outline" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn-sm btn-gold" onclick="saveEdit()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Salvo!</div>
+
+<!-- FIREBASE -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDQWN5LWzq--UNCsH1UhWZ320ZZ5tPxVh4",
+    authDomain: "boteco-municipal.firebaseapp.com",
+    projectId: "boteco-municipal",
+    storageBucket: "boteco-municipal.firebasestorage.app",
+    messagingSenderId: "239313139619",
+    appId: "1:239313139619:web:6deba4643beb35dcba0c16",
+    measurementId: "G-6T706C3S65"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const docRef = doc(db, 'cardapio', 'dados');
+
+  const PASS = 'boteco2025';
+
+  const DEFAULT_DATA = {
+    chopp: [
+      { num:1, name:'(Torneira 1 – consulte)', abv:'', ibu:'', halfPint:0, pint:0, available:false },
+      { num:2, name:'Holy Diver', abv:'8.2', ibu:'80', halfPint:27, pint:30, available:true },
+      { num:3, name:'Moon Balance', abv:'4.9', ibu:'40', halfPint:27, pint:30, available:true },
+      { num:4, name:'Mosaic', abv:'7.0', ibu:'42', halfPint:24, pint:27, available:true },
+      { num:5, name:'Orange Moon', abv:'7.5', ibu:'–', halfPint:24, pint:27, available:true },
+      { num:6, name:'Mutum', abv:'7.0', ibu:'70', halfPint:32, pint:35, available:true },
+      { num:7, name:'Gose Van Dutch', abv:'4.0', ibu:'4', halfPint:27, pint:30, available:true },
+      { num:8, name:'Red Moon', abv:'4.9', ibu:'21', halfPint:14, pint:27, available:true },
+      { num:9, name:'Tinhosa', abv:'6.5', ibu:'', halfPint:19, pint:22, available:true },
+      { num:10, name:'Pilsen', abv:'4.8', ibu:'20', halfPint:13, pint:13, available:true },
+    ],
+    cervejas: [
+      { name:'Brahma 600ml', price:'15,00' },
+      { name:'Budweiser 600ml', price:'15,00' },
+      { name:'Eisenbahn 600ml', price:'15,00' },
+      { name:'Estrela Galicia 600ml', price:'18,00' },
+      { name:'Heineken 600ml', price:'20,00' },
+      { name:'Original 600ml', price:'18,00' },
+      { name:'Therezópolis 600ml', price:'15,00' },
+      { name:'Estrela Galicia 330ml', price:'10,00' },
+      { name:'Heineken 330ml', price:'12,00' },
+      { name:'Heineken S/álcool 330ml', price:'12,00' },
+    ],
+    drinks: [
+      { name:'Cachaça', price:'10,00', category:'dose' },
+      { name:'Campari', price:'15,00', category:'dose' },
+      { name:'Conhaque', price:'7,00', category:'dose' },
+      { name:'Gin Doble W', price:'10,00', category:'dose' },
+      { name:'Jack Daniels', price:'25,00', category:'dose' },
+      { name:'Rum', price:'10,00', category:'dose' },
+      { name:'Vodka', price:'15,00', category:'dose' },
+      { name:'Whisky 8 Anos', price:'18,00', category:'dose' },
+      { name:'Whisky 12 Anos', price:'25,00', category:'dose' },
+      { name:'Caipirinha Cachaça', price:'20,00', category:'drink' },
+      { name:'Caipirinha Vodka', price:'20,00', category:'drink' },
+      { name:'Caipirinha Rum', price:'20,00', category:'drink' },
+      { name:'Caipirinha Saquê', price:'25,00', category:'drink' },
+      { name:'Gin Tônica', price:'20,00', category:'drink' },
+      { name:'Cuba Libre', price:'20,00', category:'drink' },
+      { name:'Jack and Coke', price:'30,00', category:'drink' },
+      { name:'Negroni', price:'25,00', category:'drink' },
+    ],
+    almoco: [
+      { name:'Alcatra', weight:'~150g', price:'30,00' },
+      { name:'Bife de Ancho', weight:'~200g', price:'50,00' },
+      { name:'Bisteca Suína', weight:'~160g', price:'25,00' },
+      { name:'Bife de Alcatra', weight:'~100g', price:'25,00' },
+      { name:'Contra Filé', weight:'~200g', price:'40,00' },
+      { name:'Peito de Frango', weight:'~120g', price:'25,00' },
+      { name:'Picanha', weight:'~200g', price:'50,00' },
+      { name:'Sobrecoxa em Cubos', weight:'~200g', price:'25,00' },
+      { name:'Vegetariano (2 ovos)', weight:'', price:'20,00' },
+    ],
+    sanduiches: [
+      { name:'Pão com Bolinho', price:'25,00', desc:'Bolinho feito com blend de carnes, temperos, ervas e especiarias. Maionese com alho e bacon, creme de queijo cheddar e cebolinha picada. Servido no pão francês, acompanha batata frita.' },
+      { name:'Pork', price:'25,00', desc:'Sanduíche de lombo de porco feito com mel, barbecue, especiarias, rúcula e queijo mussarela.' },
+      { name:'Pão com Bifê de Alcatra', price:'12,00', desc:'Bifê e maionese. +R$3 adicional de queijo ou ovo.' },
+      { name:'Pão com Linguiça', price:'12,00', desc:'Linguiça calabresa na chapa com cebola e ervas frescas. +R$3 adicional de queijo ou ovo.' },
+      { name:'Sanduíche de Panceta', price:'25,00', desc:'Panceta marinada na cachaça e chopp com especiarias, finalizada com salsinha, cebolinha e coentro ao molho mostarda e mel, servida no pão francês.' },
+    ],
+    porcoes: [
+      { name:'Batata Frita', weight:'400g', price:'25,00', desc:'' },
+      { name:'Batata Frita', weight:'200g (meia)', price:'15,00', desc:'' },
+      { name:'Batata Frita Cheddar e Bacon', weight:'400g', price:'35,00', desc:'' },
+      { name:'Batata Frita Cheddar e Bacon', weight:'200g (meia)', price:'25,00', desc:'' },
+      { name:'Bolinho de Abóbora com Costela', weight:'6 un', price:'25,00', desc:'Costela desfiada e finalizada na frigideira com manteiga de ervas e nossa massa de abóbora cabotia assada com azeite, sal e pimenta.' },
+      { name:'Calabresa Acebolada 200g', weight:'', price:'28,00', desc:'Linguiça calabresa acebolada, acompanha farofa e pão fatiado.' },
+      { name:'Croquete de Bacalhau', weight:'6 un', price:'45,00', desc:'Suculento bolinho de bacalhau, acompanhado de pimenta caseira.' },
+      { name:'Mini Coxinha Frango', weight:'10 un', price:'20,00', desc:'Servida com molho barbecue.' },
+      { name:'Torresmo Municipal', weight:'250g', price:'35,00', desc:'Torresmo marinado na cachaça, assado com ervas e finalizado com mel e laranja. Acompanha pimenta da casa.' },
+    ],
+    bebidas: [
+      { name:'Água sem gás', price:'5,00' },
+      { name:'Água com gás', price:'6,00' },
+      { name:'Energético Monster', price:'15,00' },
+      { name:'Energético Red Bull', price:'10,00' },
+      { name:'Refrigerante lata', price:'7,00' },
+      { name:'Refrigerante KS', price:'5,00' },
+      { name:'Maté Batido (sabores)', price:'10,00' },
+      { name:'Suco de Laranja Integral', price:'12,00' },
+      { name:'Suco de Uva Integral', price:'12,00' },
+      { name:'Suco del Valle Sabores', price:'6,00' },
+      { name:'Soda Italiana', price:'12,00' },
+      { name:'Sprite Lemon', price:'7,00' },
+    ]
+  };
+
+  let data = {};
+  let currentTab = 'almoco';
+  let editContext = { section:'', index:-1 };
+  let isLoggedIn = false;
+
+  // ─── INIT ─────────────────────────────────────────────────
+  async function init() {
+    try {
+      const snap = await getDoc(docRef);
+      data = snap.exists() ? snap.data() : JSON.parse(JSON.stringify(DEFAULT_DATA));
+    } catch(e) {
+      console.warn('Offline – usando defaults', e);
+      data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    }
+    const ls = document.getElementById('init-loading');
+    ls.classList.add('hidden');
+    setTimeout(()=>ls.remove(), 500);
+  }
+  init();
+
+  // ─── FIREBASE SAVE ────────────────────────────────────────
+  async function saveToFirebase() {
+    const status = document.getElementById('saveStatus');
+    status.textContent = '⟳ Salvando…';
+    status.className = 'save-status saving';
+    try {
+      await setDoc(docRef, data);
+      status.textContent = '✓ Salvo no Firebase';
+      status.className = 'save-status saved';
+      setTimeout(()=>{ status.textContent=''; }, 3000);
+    } catch(e) {
+      status.textContent = '✗ Erro ao salvar';
+      status.className = 'save-status error';
+      console.error(e);
+    }
+  }
+
+  // ─── LOGIN ────────────────────────────────────────────────
+  window.doLogin = function() {
+    const p = document.getElementById('adminPass').value;
+    if(p === PASS) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminApp').style.display = 'block';
+      isLoggedIn = true;
+      renderTab('almoco');
+    } else {
+      document.getElementById('loginErr').style.display = 'block';
+      document.getElementById('adminPass').value = '';
+      document.getElementById('adminPass').focus();
+    }
+  };
+
+  window.doLogout = function() {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('adminApp').style.display = 'none';
+    document.getElementById('adminPass').value = '';
+    isLoggedIn = false;
+  };
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.getElementById('adminPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  });
+
+  // ─── TABS ─────────────────────────────────────────────────
+  const ALL_TABS = ['almoco','chopp','cervejas','drinks','sanduiches','porcoes','bebidas'];
+
+  window.switchTab = function(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+      b.classList.toggle('active', ALL_TABS[i]===tab);
+    });
+    ALL_TABS.forEach(t => {
+      document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
+    });
+    renderTab(tab);
+  };
+
+  function renderTab(tab) {
+    if(tab==='chopp') renderChopp();
+    else renderGeneric(tab);
+  }
+
+  // ─── CHOPP ────────────────────────────────────────────────
+  function renderChopp() {
+    const el = document.getElementById('chopp-admin-list');
+    el.innerHTML = (data.chopp||[]).map((c,i) => `
+      <div class="chopp-admin-row">
+        <div class="chopp-admin-header">
+          <span class="chopp-admin-num">TORNEIRA ${c.num}</span>
+          <div class="toggle-wrap">
+            <button class="toggle ${c.available?'on':''}" onclick="toggleChopp(${i})"></button>
+            <span class="toggle-label">${c.available?'Disponível':'Esgotado'}</span>
+          </div>
+        </div>
+        <div class="chopp-inline-grid">
+          <div>
+            <div class="ci-label">Nome da Cerveja</div>
+            <input class="ci-input" value="${c.name}" onchange="updateChopp(${i},'name',this.value)" placeholder="Nome">
+          </div>
+          <div>
+            <div class="ci-label">ABV %</div>
+            <input class="ci-input" value="${c.abv}" onchange="updateChopp(${i},'abv',this.value)" placeholder="7.0">
+          </div>
+          <div>
+            <div class="ci-label">IBU</div>
+            <input class="ci-input" value="${c.ibu}" onchange="updateChopp(${i},'ibu',this.value)" placeholder="40">
+          </div>
+          <div>
+            <div class="ci-label">H (R$)</div>
+            <input class="ci-input" type="number" value="${c.halfPint}" onchange="updateChopp(${i},'halfPint',+this.value)" placeholder="0">
+          </div>
+          <div>
+            <div class="ci-label">P (R$)</div>
+            <input class="ci-input" type="number" value="${c.pint}" onchange="updateChopp(${i},'pint',+this.value)" placeholder="0">
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.updateChopp = function(i, field, val) { data.chopp[i][field] = val; };
+
+  window.toggleChopp = function(i) {
+    data.chopp[i].available = !data.chopp[i].available;
+    saveToFirebase();
+    renderChopp();
+    showToast('Disponibilidade atualizada!');
+  };
+
+  window.saveChopp = async function() {
+    await saveToFirebase();
+    showToast('Chopps salvos!');
+  };
+
+  // ─── GENERIC ──────────────────────────────────────────────
+  function renderGeneric(section) {
+    const el = document.getElementById('list-'+section);
+    if(!el) return;
+    el.innerHTML = (data[section]||[]).map((item,i) => {
+      const priceTag = item.price ? `R$ ${item.price}` : '';
+      const sub = item.weight || item.category || '';
+      return `
+        <div class="item-row">
+          <div class="item-row-header">
+            <div>
+              <div class="item-name">${item.name}</div>
+              ${sub?`<div style="font-family:Oswald,sans-serif;font-size:0.6rem;opacity:0.4;letter-spacing:0.1em;text-transform:uppercase;margin-top:2px">${sub}</div>`:''}
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="item-price-tag">${priceTag}</div>
+              <div class="item-actions">
+                <button class="btn-icon" onclick="openEdit('${section}',${i})" title="Editar">✏️</button>
+                <button class="btn-icon del" onclick="deleteItem('${section}',${i})" title="Excluir">🗑️</button>
+              </div>
+            </div>
+          </div>
+          ${item.desc?`<div style="font-size:0.78rem;opacity:0.5;font-style:italic;margin-top:4px;line-height:1.4">${item.desc}</div>`:''}
+        </div>
+      `;
+    }).join('') || `<div style="text-align:center;opacity:0.3;padding:30px;font-family:Oswald,sans-serif;font-size:0.7rem;letter-spacing:0.15em">NENHUM ITEM CADASTRADO</div>`;
+  }
+
+  // ─── FORMS ────────────────────────────────────────────────
+  window.openAddForm = function(section) {
+    const el = document.getElementById('form-'+section);
+    el.classList.toggle('open', !el.classList.contains('open'));
+  };
+  window.closeForm = function(section) {
+    document.getElementById('form-'+section).classList.remove('open');
+  };
+
+  window.addItem = async function(section) {
+    const name = document.getElementById(`f-${section}-name`)?.value.trim();
+    const price = document.getElementById(`f-${section}-price`)?.value.trim();
+    if(!name) { showToast('Digite o nome do item'); return; }
+    let item = { name, price: price||'0,00' };
+    if(section==='drinks') item.category = document.getElementById('f-drinks-category').value;
+    if(section==='almoco') item.weight = document.getElementById('f-almoco-weight')?.value.trim()||'';
+    if(section==='sanduiches'||section==='porcoes') item.desc = document.getElementById(`f-${section}-desc`)?.value.trim()||'';
+    if(section==='porcoes') item.weight = document.getElementById('f-porcoes-weight')?.value.trim()||'';
+    data[section].push(item);
+    await saveToFirebase();
+    renderGeneric(section);
+    closeForm(section);
+    ['name','price','weight','desc'].forEach(f => {
+      const el = document.getElementById(`f-${section}-${f}`);
+      if(el) el.value = '';
+    });
+    showToast('Item adicionado!');
+  };
+
+  window.deleteItem = async function(section, i) {
+    if(!confirm(`Excluir "${data[section][i].name}"?`)) return;
+    data[section].splice(i,1);
+    await saveToFirebase();
+    renderGeneric(section);
+    showToast('Item excluído!');
+  };
+
+  // ─── EDIT MODAL ───────────────────────────────────────────
+  window.openEdit = function(section, i) {
+    editContext = { section, index: i };
+    const item = data[section][i];
+    document.getElementById('editModalTitle').textContent = 'Editar: ' + item.name;
+    let fields = `
+      <div class="form-group full" style="margin-bottom:10px">
+        <div class="form-label">Nome</div>
+        <input class="form-input" id="e-name" value="${item.name||''}">
+      </div>
+      <div class="form-group full" style="margin-bottom:10px">
+        <div class="form-label">Preço</div>
+        <input class="form-input" id="e-price" value="${item.price||''}">
+      </div>
+    `;
+    if(item.weight!==undefined) fields += `<div class="form-group full" style="margin-bottom:10px"><div class="form-label">Peso/Qtd</div><input class="form-input" id="e-weight" value="${item.weight||''}"></div>`;
+    if(item.category!==undefined) fields += `<div class="form-group full" style="margin-bottom:10px"><div class="form-label">Categoria</div><select class="form-select" id="e-category"><option value="dose" ${item.category==='dose'?'selected':''}>Dose</option><option value="drink" ${item.category==='drink'?'selected':''}>Drink/Caipirinha</option></select></div>`;
+    if(item.desc!==undefined) fields += `<div class="form-group full"><div class="form-label">Descrição</div><textarea class="form-textarea" id="e-desc">${item.desc||''}</textarea></div>`;
+    document.getElementById('editModalBody').innerHTML = fields;
+    document.getElementById('editModal').classList.add('open');
+  };
+
+  window.closeEditModal = function() { document.getElementById('editModal').classList.remove('open'); };
+
+  window.saveEdit = async function() {
+    const { section, index } = editContext;
+    const item = data[section][index];
+    item.name = document.getElementById('e-name')?.value.trim() || item.name;
+    item.price = document.getElementById('e-price')?.value.trim() || item.price;
+    if(document.getElementById('e-weight')) item.weight = document.getElementById('e-weight').value.trim();
+    if(document.getElementById('e-category')) item.category = document.getElementById('e-category').value;
+    if(document.getElementById('e-desc')) item.desc = document.getElementById('e-desc').value.trim();
+    await saveToFirebase();
+    renderGeneric(section);
+    closeEditModal();
+    showToast('Alterações salvas!');
+  };
+
+  // ─── TOAST ────────────────────────────────────────────────
+  window.showToast = function(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2500);
+  };
+</script>
+</body>
+</html>
